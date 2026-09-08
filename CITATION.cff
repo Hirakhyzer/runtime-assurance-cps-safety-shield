@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+title: "Runtime Assurance CPS Safety Shield"
+message: "If you use this research software, please cite the repository."
+type: software
+authors:
+  - family-names: Khyzer
+    given-names: Hira
+version: 0.1.0
+date-released: 2026-09-08
+repository-code: "https://github.com/Hirakhyzer/runtime-assurance-cps-safety-shield"

@@ -1,0 +1,17 @@
+{
+  "steps": 50,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "horizon": 2,
+  "grid_points": 7,
+  "attack_scales": [
+    0.0,
+    1.0,
+    3.0
+  ]
+}
