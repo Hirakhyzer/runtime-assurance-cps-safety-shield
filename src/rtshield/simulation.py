@@ -1,9 +1,11 @@
 from __future__ import annotations
 import numpy as np
+from rtshield.audit import build_decision_audit_record
 from rtshield.estimation.interval import IntervalStateEstimator
 from rtshield.shields.reachability import ReachabilityShield
 from rtshield.core.types import ActionProposal, DecisionStatus
 from rtshield.metrics import RuntimeMetrics
+
 
 def run_domain(spec,steps=60,seed=0,shielded=True,attack_scale=0.0,horizon=2):
     rng=np.random.default_rng(seed); x=spec.initial_state.copy(); metrics=RuntimeMetrics(); records=[]
@@ -23,6 +25,7 @@ def run_domain(spec,steps=60,seed=0,shielded=True,attack_scale=0.0,horizon=2):
             # Abstract controller-output corruption; the shield sees and filters the corrupted proposal.
             proposed=proposed + attack_scale*0.75*np.asarray(spec.attack_action_direction,float)
         decision=shield.filter(estimate,ActionProposal(proposed,controller="synthetic_corrupted" if active else "nominal"))
+        audit=build_decision_audit_record(k,estimate,decision).to_dict()
         u=decision.applied_action if shielded else np.clip(proposed,spec.action_lower,spec.action_upper)
         w=rng.uniform(spec.model.disturbance.lower,spec.model.disturbance.upper)
         x=spec.model.step_point(x,u,w)
@@ -35,5 +38,13 @@ def run_domain(spec,steps=60,seed=0,shielded=True,attack_scale=0.0,horizon=2):
             class Shadow:
                 status=DecisionStatus.ACCEPT; intervention_norm=0.0
             metrics.update(Shadow(),actual_safe,margin)
-        records.append({'step':k,'safe':actual_safe,'attack_active':active,'status':decision.status.value if shielded else 'UNSHIELDED','intervention':decision.intervention_norm if shielded else 0.0,'margin':margin})
+        records.append({
+            'step':k,
+            'safe':actual_safe,
+            'attack_active':active,
+            'status':decision.status.value if shielded else 'UNSHIELDED',
+            'intervention':decision.intervention_norm if shielded else 0.0,
+            'margin':margin,
+            'shield_audit':audit,
+        })
     return metrics.summary(),records
