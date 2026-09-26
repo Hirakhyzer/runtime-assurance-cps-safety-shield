@@ -26,6 +26,8 @@ Nominal Controller → proposed action → Runtime Safety Shield
                                             fallback if needed
                                                    ↓
                                              Applied Action
+                                                   ↓
+                                      Structured Decision Audit
 ```
 
 ## v0.2 capabilities
@@ -43,6 +45,8 @@ Nominal Controller → proposed action → Runtime Safety Shield
 - **paired shielded-vs-unshielded benchmark evaluation on matched seeds**;
 - explicit unsafe-state reduction and safety/service trade-off reporting;
 - configurable benchmark artifacts with experiment metadata;
+- **step-level decision audit records with state bounds, proposed/applied actions, predicted reachable sets, reasons, and shield metadata**;
+- CLI export of complete JSON decision traces for reproducibility and reviewer inspection;
 - deterministic tests and multi-version CI.
 
 ## Safety semantics
@@ -59,7 +63,7 @@ the shield computes an over-approximated successor box
 \widehat{\mathcal R}_{t+1}=AX_t\oplus BU\oplus c\oplus W.
 \]
 
-A candidate is declared **certified safe by this v0.1 shield** only when each predicted box over the configured finite horizon is contained in the configured safe box. The claim is therefore conditional on the stated model, horizon, discretization, uncertainty bounds, and box over-approximation. It is **not** a universal safety proof.
+A candidate is declared **certified safe by this v0.2 shield** only when each predicted box over the configured finite horizon is contained in the configured safe box. The claim is therefore conditional on the stated model, horizon, discretization, uncertainty bounds, and box over-approximation. It is **not** a universal safety proof.
 
 ## Quick start
 
@@ -70,6 +74,20 @@ python scripts/run_demo.py
 python scripts/run_benchmark.py
 rtshield --domain battery --steps 40 --attack-scale 1.0
 ```
+
+Export a step-level decision trace:
+
+```bash
+rtshield \
+  --domain battery \
+  --steps 40 \
+  --seed 7 \
+  --attack-scale 1.0 \
+  --horizon 2 \
+  --trace-output artifacts/battery-seed7-trace.json
+```
+
+The trace artifact stores the experiment settings, aggregate metrics, and per-step shield evidence, including the state-estimation interval, nominal and applied actions, predicted reachable-set bounds, intervention reason, candidate-search metadata, and safety margin.
 
 Run a larger paired benchmark with explicit experiment settings:
 
@@ -82,9 +100,19 @@ python scripts/run_benchmark.py \
   --output results/paired-study.json
 ```
 
+## Decision traceability
+
+Runtime assurance is more useful as a research object when each intervention can be reconstructed rather than reported only as an aggregate intervention count.
+
+The audit layer records what the shield saw and what it decided **without changing the filtering logic**. This enables research on intervention concentration, action-grid search burden, fallback precursors, margin before intervention, explanation stability, and human verification of runtime decisions.
+
+A decision trace is not a safety certificate. It is an inspectable record of the shield's computation under the configured reduced-order model, uncertainty bounds, and finite horizon.
+
+See [`docs/runtime-decision-audit.md`](docs/runtime-decision-audit.md) for the traceability protocol and interpretation boundary.
+
 ## Paired safety-versus-service evaluation
 
-The benchmark now evaluates runtime assurance using **matched random seeds**. For every domain, attack scale, and seed, the same stochastic scenario is run once without the shield and once with the shield. This avoids comparing averages from unrelated random trials.
+The benchmark evaluates runtime assurance using **matched random seeds**. For every domain, attack scale, and seed, the same stochastic scenario is run once without the shield and once with the shield. This avoids comparing averages from unrelated random trials.
 
 The paired summary reports:
 
@@ -120,5 +148,7 @@ See [`docs/paired-benchmark-protocol.md`](docs/paired-benchmark-protocol.md) for
 6. Verify learning-enabled controllers and runtime-assurance wrappers.
 7. Measure worst-case computation time and real-time feasibility.
 8. Add bootstrap confidence intervals and preregistered sensitivity sweeps for the paired benchmark.
+9. Evaluate whether human reviewers can accurately verify intervention rationale from decision traces.
+10. Study audit stability under small telemetry and uncertainty perturbations.
 
-See `docs/` for semantics, assumptions, benchmark methodology, limitations, and the PhD research roadmap.
+See `docs/` for semantics, assumptions, benchmark methodology, limitations, and the research roadmap.
