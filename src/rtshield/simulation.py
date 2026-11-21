@@ -1,4 +1,5 @@
 from __future__ import annotations
+from math import isfinite
 import numpy as np
 from rtshield.audit import build_decision_audit_record
 from rtshield.estimation.interval import IntervalStateEstimator
@@ -8,6 +9,15 @@ from rtshield.metrics import RuntimeMetrics
 
 
 def run_domain(spec,steps=60,seed=0,shielded=True,attack_scale=0.0,horizon=2):
+    if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
+        raise ValueError("steps must be a positive integer")
+    if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon < 1:
+        raise ValueError("horizon must be a positive integer")
+    if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+        raise ValueError("seed must be a nonnegative integer")
+    if (isinstance(attack_scale, bool) or not isinstance(attack_scale, (int, float))
+            or not isfinite(attack_scale) or attack_scale < 0):
+        raise ValueError("attack_scale must be finite and nonnegative")
     rng=np.random.default_rng(seed); x=spec.initial_state.copy(); metrics=RuntimeMetrics(); records=[]
     estimator=IntervalStateEstimator(measurement_radius=np.ones_like(x)*0.04,twin_radius=np.ones_like(x)*0.08)
     shield=ReachabilityShield(spec.model,spec.property,spec.action_lower,spec.action_upper,spec.fallback_action,horizon=horizon,grid_points=7,action_uncertainty=0.03)

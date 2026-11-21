@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from math import isfinite
+
 from rtshield.domains import battery, railway, robot, water
 from rtshield.evaluation import summarize_paired_runs
 from rtshield.simulation import run_domain
@@ -21,10 +23,21 @@ def run_suite(
     """
     if not seeds:
         raise ValueError("at least one benchmark seed is required")
-    if steps < 1:
-        raise ValueError("steps must be positive")
-    if horizon < 1:
-        raise ValueError("horizon must be positive")
+    if any(isinstance(seed, bool) or not isinstance(seed, int) or seed < 0 for seed in seeds):
+        raise ValueError("benchmark seeds must be nonnegative integers")
+    if len(set(seeds)) != len(seeds):
+        raise ValueError("benchmark seeds must be unique")
+    if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
+        raise ValueError("steps must be a positive integer")
+    if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon < 1:
+        raise ValueError("horizon must be a positive integer")
+    if not attack_scales:
+        raise ValueError("at least one attack scale is required")
+    if any(isinstance(scale, bool) or not isinstance(scale, (int, float))
+           or not isfinite(scale) or scale < 0 for scale in attack_scales):
+        raise ValueError("attack scales must be finite and nonnegative")
+    if len(set(attack_scales)) != len(attack_scales):
+        raise ValueError("attack scales must be unique")
 
     output: dict[str, list[dict]] = {}
     for module in (battery, water, robot, railway):
