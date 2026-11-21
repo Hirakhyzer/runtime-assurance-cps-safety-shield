@@ -30,7 +30,7 @@ Nominal Controller → proposed action → Runtime Safety Shield
                                       Structured Decision Audit
 ```
 
-## v0.2 capabilities
+## Implemented capabilities
 
 - affine discrete-time CPS models;
 - outward-expanded interval/box uncertainty;
@@ -48,6 +48,7 @@ Nominal Controller → proposed action → Runtime Safety Shield
 - **step-level decision audit records with state bounds, proposed/applied actions, predicted reachable sets, reasons, and shield metadata**;
 - CLI export of complete JSON decision traces for reproducibility and reviewer inspection;
 - deterministic tests and multi-version CI.
+- **v0.1.1 reliability patch:** finite and dimensionally valid interval/model inputs, checked shield action grids and uncertainty settings, and validated paired-benchmark configurations, with regression tests. No hardware safety guarantees are implied.
 
 ## Safety semantics
 
