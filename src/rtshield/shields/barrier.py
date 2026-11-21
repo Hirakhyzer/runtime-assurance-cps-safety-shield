@@ -5,6 +5,7 @@ from rtshield.core.types import StateEstimate, ActionProposal, ShieldDecision, D
 from rtshield.models.affine import AffineDiscreteModel
 from rtshield.safety.properties import SafeBoxProperty
 from rtshield.sets.box import Box
+from rtshield.shields.validation import validate_action_space, validate_filter_inputs
 
 @dataclass
 class BarrierGridShield:
@@ -18,10 +19,14 @@ class BarrierGridShield:
     action_uncertainty: float|np.ndarray = 0.0
 
     def __post_init__(self):
-        self.action_lower=np.asarray(self.action_lower,float); self.action_upper=np.asarray(self.action_upper,float); self.fallback_action=np.asarray(self.fallback_action,float)
+        (self.action_lower, self.action_upper, self.fallback_action,
+         self.action_uncertainty) = validate_action_space(
+            self.model, self.action_lower, self.action_upper,
+            self.fallback_action, self.action_uncertainty, self.grid_points,
+        )
 
     def filter(self,estimate:StateEstimate,proposal:ActionProposal)->ShieldDecision:
-        n=np.asarray(proposal.nominal,float)
+        n=validate_filter_inputs(self.model,estimate,proposal)
         axes=[np.unique(np.r_[np.linspace(lo,hi,self.grid_points),np.clip(ni,lo,hi)]) for lo,hi,ni in zip(self.action_lower,self.action_upper,n)]
         best=None
         for combo in itertools.product(*axes):

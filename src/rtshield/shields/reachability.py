@@ -5,6 +5,7 @@ from rtshield.core.types import StateEstimate, ActionProposal, ShieldDecision, D
 from rtshield.models.affine import AffineDiscreteModel
 from rtshield.safety.properties import SafeBoxProperty
 from rtshield.sets.box import Box
+from rtshield.shields.validation import validate_action_space, validate_filter_inputs
 
 @dataclass
 class ReachabilityShield:
@@ -19,8 +20,18 @@ class ReachabilityShield:
     extra_disturbance: Box|None = None
 
     def __post_init__(self):
-        self.action_lower=np.asarray(self.action_lower,float); self.action_upper=np.asarray(self.action_upper,float)
-        self.fallback_action=np.asarray(self.fallback_action,float)
+        (self.action_lower, self.action_upper, self.fallback_action,
+         self.action_uncertainty) = validate_action_space(
+            self.model, self.action_lower, self.action_upper,
+            self.fallback_action, self.action_uncertainty, self.grid_points,
+        )
+        if isinstance(self.horizon, bool) or not isinstance(self.horizon, int) or self.horizon < 1:
+            raise ValueError("horizon must be a positive integer")
+        if self.extra_disturbance is not None and (
+            not isinstance(self.extra_disturbance, Box)
+            or self.extra_disturbance.dim != self.model.state_dim
+        ):
+            raise ValueError("extra disturbance must match the model state dimension")
 
     def _rollout_safe(self,state:Box,u:np.ndarray):
         ub=Box.around(u,self.action_uncertainty); cur=state; last=state; margin=float('inf')
@@ -48,7 +59,7 @@ class ReachabilityShield:
         yield from combos
 
     def filter(self,estimate:StateEstimate,proposal:ActionProposal)->ShieldDecision:
-        n=np.asarray(proposal.nominal,float)
+        n=validate_filter_inputs(self.model,estimate,proposal)
         for i,u in enumerate(self._candidates(n)):
             ok,reach,margin=self._rollout_safe(estimate.uncertainty,u)
             if ok:

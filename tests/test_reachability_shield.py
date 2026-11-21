@@ -23,3 +23,48 @@ def test_multistep_is_more_conservative():
     d1=ReachabilityShield(m,p,np.array([-1.]),np.array([1.]),np.array([0.]),horizon=1,grid_points=9).filter(e,q)
     d2=ReachabilityShield(m,p,np.array([-1.]),np.array([1.]),np.array([0.]),horizon=3,grid_points=9).filter(e,q)
     assert d1.status==DecisionStatus.ACCEPT and d2.status!=DecisionStatus.ACCEPT
+
+
+import pytest
+
+
+@pytest.mark.parametrize("settings", [
+    {"horizon": 0},
+    {"horizon": 1.5},
+    {"grid_points": 1},
+    {"grid_points": True},
+    {"action_lower": np.array([0.0, 0.0])},
+    {"action_upper": np.array([float("nan")])},
+    {"action_lower": np.array([2.0])},
+    {"action_uncertainty": -0.1},
+    {"action_uncertainty": float("inf")},
+    {"extra_disturbance": Box.point([0.0, 0.0])},
+])
+def test_invalid_reachability_configuration_rejected(settings):
+    model, prop = fixture()
+    base = dict(model=model, property=prop, action_lower=np.array([-1.0]),
+                action_upper=np.array([1.0]), fallback_action=np.array([0.0]))
+    base.update(settings)
+    with pytest.raises(ValueError):
+        ReachabilityShield(**base)
+
+
+@pytest.mark.parametrize("action", [
+    [float("nan")], [float("inf")], [0.0, 0.0],
+])
+def test_invalid_reachability_action_rejected(action):
+    model, prop = fixture()
+    shield = ReachabilityShield(model, prop, np.array([-1.0]), np.array([1.0]),
+                                np.array([0.0]))
+    estimate = StateEstimate(np.array([0.0]), Box.point([0.0]))
+    with pytest.raises(ValueError, match="nominal action"):
+        shield.filter(estimate, ActionProposal(np.asarray(action)))
+
+
+def test_invalid_reachability_estimate_dimension_rejected():
+    model, prop = fixture()
+    shield = ReachabilityShield(model, prop, np.array([-1.0]), np.array([1.0]),
+                                np.array([0.0]))
+    with pytest.raises(ValueError, match="state estimate"):
+        shield.filter(StateEstimate(np.array([0.0]), Box.point([0.0, 0.0])),
+                      ActionProposal(np.array([0.0])))
